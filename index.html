@@ -88,7 +88,21 @@ button.ghost{font:inherit;font-weight:600;font-size:13px;background:#fff;color:v
 .toast{position:fixed;bottom:20px;left:50%;transform:translateX(-50%) translateY(100px);background:var(--green);color:#fff;padding:12px 22px;border-radius:10px;font-weight:600;font-size:14px;z-index:30;transition:.3s;box-shadow:0 6px 24px rgba(0,0,0,.2)}
 .toast.show{transform:translateX(-50%) translateY(0)}
 .back{font:inherit;font-size:13px;font-weight:600;color:var(--navy);background:none;border:none;cursor:pointer;margin-bottom:10px}
-@media(max-width:640px){.grid2{grid-template-columns:1fr}.vgrid{grid-template-columns:1fr 1fr}.screen{height:210px}main{padding:14px 12px 50px}}
+.anstats{display:grid;grid-template-columns:repeat(5,1fr);gap:10px;margin:14px 0}
+.anstat{background:var(--card);border:1px solid var(--border);border-radius:11px;padding:12px;text-align:center}
+.anstat .n{font-size:19px;font-weight:800;color:var(--navy)}
+.anstat .l{font-size:11px;color:var(--muted);font-weight:600;margin-top:2px}
+.anseq{display:flex;align-items:stretch;gap:6px;overflow-x:auto;padding:6px 2px}
+.anseq-card{flex:0 0 150px;background:var(--card);border:1px solid var(--border);border-radius:11px;overflow:hidden;cursor:pointer;position:relative}
+.anseq-card:hover{box-shadow:0 4px 14px rgba(0,0,0,.10)}
+.anseq-num{position:absolute;left:7px;top:7px;z-index:2;background:var(--navy);color:#fff;width:20px;height:20px;border-radius:50%;font-size:11px;font-weight:800;display:flex;align-items:center;justify-content:center}
+.anseq-thumb{height:72px;display:flex;align-items:center;justify-content:center;color:#fff;font-size:17px;position:relative}
+.anseq-thumb .anseq-dur{position:absolute;right:6px;bottom:6px;background:rgba(0,0,0,.6);font-size:10px;font-weight:600;padding:1px 6px;border-radius:4px}
+.anseq-body{padding:9px 10px}
+.anseq-fase{font-weight:700;font-size:12.5px}
+.anseq-tit{font-size:11px;margin-top:2px}
+.anseq-arrow{flex:0 0 auto;align-self:center;color:var(--muted);font-weight:800}
+@media(max-width:640px){.grid2{grid-template-columns:1fr}.vgrid{grid-template-columns:1fr 1fr}.screen{height:210px}main{padding:14px 12px 50px}.anstats{grid-template-columns:repeat(2,1fr)}}
 </style></head>
 <body>
 <div class="demo-bar">⚙️ <b>DEMO</b> — dati di esempio inventati · alcune funzioni sono ancora da implementare (anteprima del risultato)</div>
@@ -97,6 +111,7 @@ button.ghost{font:inherit;font-weight:600;font-size:13px;background:#fff;color:v
   <nav>
     <button id="nav-lib" class="active" onclick="show('lib')">Libreria</button>
     <button id="nav-fc" onclick="show('fc')">Fasi &amp; Commesse</button>
+    <button id="nav-an" onclick="show('an')">Analisi</button>
     <button id="nav-up" onclick="show('up')">Carica video</button>
   </nav>
 </header>
@@ -135,6 +150,14 @@ button.ghost{font:inherit;font-weight:600;font-size:13px;background:#fff;color:v
       <div><label>Nuova fase nel catalogo</label><div class="addrow"><input id="newFase" placeholder="es. Orlatura"><button class="ghost" onclick="addFaseCat()">+ aggiungi</button></div></div>
     </div>
   </div>
+</section>
+
+<!-- ===== ANALISI ===== -->
+<section id="an" class="view">
+  <h1>Analisi per commessa</h1>
+  <div class="sub">Scegli una <b>tipologia di commessa</b>: vedi la <b>sequenza delle fasi</b> (in ordine) e una sintesi dei <b>tempi</b> delle lavorazioni coinvolte.</div>
+  <div class="filters"><select id="anSel" onchange="renderAn()" style="flex:0 0 300px"></select></div>
+  <div id="anOut"></div>
 </section>
 
 <!-- ===== CARICA ===== -->
@@ -253,6 +276,19 @@ function addCom(){const v=document.getElementById("newCom").value.trim();
 function addFaseCat(){const v=document.getElementById("newFase").value.trim();
   if(v&&FASI.indexOf(v)<0){FASI.push(v);FCOL[v]=["#555","#888"];document.getElementById("newFase").value="";renderFC();toast("Aggiunta fase: "+v);}}
 
+// ---- ANALISI per commessa ----
+function openById(id){const d=data.find(x=>x.id===id);if(d)openDet(d);}
+function setupAn(){const sel=document.getElementById("anSel");sel.innerHTML=Object.keys(comFasi).map(c=>`<option>${c}</option>`).join("");renderAn();}
+function renderAn(){const c=document.getElementById("anSel").value;const out=document.getElementById("anOut");const fasi=comFasi[c]||[];
+  if(!fasi.length){out.innerHTML='<p class="muted" style="margin-top:14px">Nessuna fase collegata a questa commessa. Aggiungile in "Fasi & Commesse".</p>';return;}
+  const items=fasi.map(f=>{const v=data.find(d=>d.fase===f);return {fase:f,v:v,dur:v?v.dur:300};});
+  const durs=items.map(i=>i.dur);
+  const tot=durs.reduce((a,b)=>a+b,0),med=Math.round(tot/durs.length),mn=Math.min(...durs),mx=Math.max(...durs);
+  const stats=`<div class="anstats"><div class="anstat"><div class="n">${fasi.length}</div><div class="l">fasi</div></div><div class="anstat"><div class="n">${fmt(tot)}</div><div class="l">tempo totale</div></div><div class="anstat"><div class="n">${fmt(med)}</div><div class="l">tempo medio</div></div><div class="anstat"><div class="n">${fmt(mn)}</div><div class="l">tempo minimo</div></div><div class="anstat"><div class="n">${fmt(mx)}</div><div class="l">tempo massimo</div></div></div>`;
+  const seq=items.map((it,i)=>{const click=it.v?`openById(${it.v.id})`:"";return `<div class="anseq-card" onclick="${click}"><div class="anseq-num">${i+1}</div><div class="anseq-thumb" style="background:${colorFor(it.fase)}">▶<span class="anseq-dur">${fmt(it.dur)}</span></div><div class="anseq-body"><div class="anseq-fase">${it.fase}</div><div class="anseq-tit muted">${it.v?it.v.tit:"(video di esempio)"}</div></div></div>`;}).join('<span class="anseq-arrow">→</span>');
+  out.innerHTML=stats+`<div class="anseq">${seq}</div><p class="muted" style="margin-top:10px">I tempi derivano dalla durata dei video delle fasi (valori d'esempio).</p>`;
+}
+
 // ---- carica (simulato, senza enfasi tecnica) ----
 function startUpload(){const box=document.getElementById("upbox");box.classList.add("show");
   ["s1","s2"].forEach(s=>document.getElementById(s).className="step");
@@ -272,8 +308,9 @@ function startUpload(){const box=document.getElementById("upbox");box.classList.
 function show(v){document.querySelectorAll(".view").forEach(s=>s.classList.remove("active"));document.getElementById(v).classList.add("active");
   document.getElementById("nav-lib").classList.toggle("active",v==="lib"||v==="det");
   document.getElementById("nav-fc").classList.toggle("active",v==="fc");
+  document.getElementById("nav-an").classList.toggle("active",v==="an");
   document.getElementById("nav-up").classList.toggle("active",v==="up");
-  if(v==="lib")renderLib(); if(v==="fc")renderFC(); window.scrollTo(0,0);}
+  if(v==="lib")renderLib(); if(v==="fc")renderFC(); if(v==="an")setupAn(); window.scrollTo(0,0);}
 let tt;function toast(m){const t=document.getElementById("toast");t.textContent=m;t.classList.add("show");clearTimeout(tt);tt=setTimeout(()=>t.classList.remove("show"),2200);}
 renderLib();renderFC();
 </script>
